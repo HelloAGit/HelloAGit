@@ -1,0 +1,7 @@
+version: '3.8'
+
+services:
+  toxqsar:
+    build:
+      context: .
+      dockerfile: Dockerfile
