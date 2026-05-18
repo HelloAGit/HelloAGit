@@ -1,0 +1,117 @@
+Data handling
+Metric definitions
+Bias detection logic
+Mitigation / improvement steps
+Plots / reporting
+
+Core Fairness Metrics
+# metrics/metrics_core.py
+import numpy as np
+import pandas as pd
+
+def demographic_parity(y_pred: pd.Series, sensitive: pd.Series) -> float:
+    """
+    Difference in positive prediction rates between sensitive groups.
+    """
+    rates = (
+        pd.concat({"y_pred": y_pred, "s": sensitive}, axis=1)
+        .groupby("s")["y_pred"]
+        .mean()
+    )
+    return float(rates.max() - rates.min())
+
+
+def equal_opportunity(y_true: pd.Series, y_pred: pd.Series, sensitive: pd.Series) -> float:
+    """
+    Difference in true positive rates between sensitive groups.
+    """
+    df = pd.concat({"y_true": y_true, "y_pred": y_pred, "s": sensitive}, axis=1)
+    tprs = (
+        df[df["y_true"] == 1]
+        .groupby("s")
+        .apply(lambda g: (g["y_pred"] == 1).mean())
+    )
+    return float(tprs.max() - tprs.min())
+
+from .metrics_core import demographic_parity, equal_opportunity
+
+__all__ = ["demographic_parity", "equal_opportunity"]
+
+# metrics/mitigation.py
+import pandas as pd
+from sklearn.linear_model import LogisticRegression
+from sklearn.preprocessing import StandardScaler
+from sklearn.pipeline import Pipeline
+
+def train_baseline_model(X: pd.DataFrame, y: pd.Series):
+    pipe = Pipeline(
+        steps=[
+            ("scaler", StandardScaler(with_mean=False)),
+            ("clf", LogisticRegression(max_iter=1000)),
+        ]
+    )
+    pipe.fit(X, y)
+    return pipe
+
+def reweight_samples(X, y, sensitive):
+    """
+    Return sample weights to reduce imbalance across sensitive groups.
+    """
+    df = pd.concat({"y": y, "s": sensitive}, axis=1)
+    group_counts = df.groupby(["s", "y"]).size()
+    inv_freq = 1.0 / group_counts
+    weights = df.apply(lambda row: inv_freq.loc[row["s"], row["y"]], axis=1)
+    return weights
+
+4. A simple end-to-end evaluation script
+# examples/demo_script.py
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from metrics import demographic_parity, equal_opportunity
+from metrics.mitigation import train_baseline_model
+
+def main():
+    # Example: load your dataset here
+    df = pd.read_csv("data/example.csv")
+    y = df["label"]
+    s = df["sensitive_attribute"]
+    X = df.drop(columns=["label", "sensitive_attribute"])
+
+    X_train, X_test, y_train, y_test, s_train, s_test = train_test_split(
+        X, y, s, test_size=0.3, random_state=42, stratify=y
+    )
+
+    model = train_baseline_model(X_train, y_train)
+    y_pred = (model.predict_proba(X_test)[:, 1] > 0.5).astype(int)
+
+    dp = demographic_parity(y_pred, s_test)
+    eo = equal_opportunity(y_test, y_pred, s_test)
+
+    print(f"Demographic parity gap: {dp:.3f}")
+    print(f"Equal opportunity gap: {eo:.3f}")
+
+if __name__ == "__main__":
+    main()
+
+
+
+
+# tests/test_metrics_core.py
+import pandas as pd
+from metrics import demographic_parity, equal_opportunity
+
+def test_demographic_parity_zero_when_balanced():
+    y_pred = pd.Series([1, 0, 1, 0])
+    s = pd.Series([0, 0, 1, 1])
+    assert demographic_parity(y_pred, s) == 0.0
+
+def test_equal_opportunity_nonzero_when_group_differs():
+    y_true = pd.Series([1, 1, 1, 1])
+    y_pred = pd.Series([1, 0, 1, 0])
+    s = pd.Series([0, 0, 1, 1])
+    gap = equal_opportunity(y_true, y_pred, s)
+    assert gap > 0
+
+
+
+
