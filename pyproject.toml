@@ -1,0 +1,70 @@
+[build-system]
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fairness-metrics"
+version = "0.1.0"
+description = "A practical library for computing fairness metrics and experimenting with bias mitigation strategies"
+readme = "README.md"
+requires-python = ">=3.8"
+authors = [
+    {name = "HelloAGit", email = "contact@helloagit.dev"}
+]
+license = {text = "MIT"}
+keywords = ["fairness", "bias", "machine-learning", "metrics"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+]
+
+dependencies = [
+    "numpy>=1.20.0",
+    "pandas>=1.3.0",
+    "scikit-learn>=1.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov>=3.0",
+    "black>=22.0",
+    "flake8>=4.0",
+    "mypy>=0.950",
+]
+
+docs = [
+    "sphinx>=4.5",
+    "sphinx-rtd-theme>=1.0",
+]
+
+[project.urls]
+Repository = "https://github.com/HelloAGit/HelloAGit"
+Documentation = "https://helloagit.github.io/HelloAGit"
+Issues = "https://github.com/HelloAGit/HelloAGit/issues"
+
+[tool.setuptools]
+packages = ["Metrics"]
+
+[tool.black]
+line-length = 100
+target-version = ['py38']
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = "test_*.py"
+addopts = "-v --strict-markers"
+
+[tool.mypy]
+python_version = "3.8"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
